@@ -14,22 +14,29 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 async function run() {
     try {
-       const bikesCategory =  client.db('bike-parlour').collection('categories');
-       const bikesCollection =  client.db('bike-parlour').collection('bikes');
+        const bikesCategory = client.db('bike-parlour').collection('categories');
+        const bikesCollection = client.db('bike-parlour').collection('bikes');
+        const usersCollection = client.db('bike-parlour').collection('users');
 
-       app.get('/categories', async(req, res) => {
-        const query = {};
-        const cursor = bikesCategory.find(query);
-        const categories = await cursor.toArray();
-        res.send(categories);
-       });
+        app.get('/categories', async (req, res) => {
+            const query = {};
+            const cursor = bikesCategory.find(query);
+            const categories = await cursor.toArray();
+            res.send(categories);
+        });
 
-       app.get('/categories/:name', async(req, res) => {
-        const name = req.params.name;
-        const query = {name: name};
-        const bikes = await bikesCollection.find(query).toArray();
-        res.send(bikes);
-    });
+        app.get('/categories/:name', async (req, res) => {
+            const name = req.params.name;
+            const query = { name: name };
+            const bikes = await bikesCollection.find(query).toArray();
+            res.send(bikes);
+        });
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
 
     }
     finally {
