@@ -4,6 +4,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 
 app.use(cors());
 app.use(express.json());
@@ -37,11 +38,35 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/users', async(req, res) => {
+        app.get('/users', async (req, res) => {
             const query = {};
             const users = await usersCollection.find(query).toArray();
             res.send(users);
-        })
+        });
+
+        app.get('/jwt', async(req, res) => {
+            const uid = req.query.uid;
+            const query = {uid: uid};
+            const user = await usersCollection.findOne(query);
+            if(user){
+                const token = jwt.sign({uid}, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1d'});
+                return res.send({accessToken:  token})
+            }
+            console.log(user);
+            res.status(403).send({accessToken:  ''})
+        });
+
+        app.get('/jwts', async(req, res) => {
+            const uid = req.query.uid;
+            const query = {uid: uid};
+            const user = await usersCollection.findOne(query);
+            if(!user){
+                const token = jwt.sign({uid}, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1d'});
+                return res.send({accessToken:  token})
+            }
+            console.log(user);
+            res.status(403).send({accessToken:  ''})
+        });
 
     }
     finally {
