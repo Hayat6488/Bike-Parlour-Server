@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
@@ -46,7 +46,7 @@ async function run() {
 
         app.get('/categories/:name', async (req, res) => {
             const name = req.params.name;
-            const query = { name: name };
+            const query = { category: name };
             const bikes = await bikesCollection.find(query).toArray();
             res.send(bikes);
         });
@@ -59,7 +59,7 @@ async function run() {
 
         app.post('/bikes', async (req, res) => {
             const bike = req.body;
-            const result = await usersCollection.insertOne(bike);
+            const result = await bikesCollection.insertOne(bike);
             res.send(result);
         });
 
@@ -67,6 +67,14 @@ async function run() {
             const query = {};
             const users = await usersCollection.find(query).toArray();
             res.send(users);
+        });
+
+        app.get('/user', async (req, res) => {
+            const id = req.query.uid;
+            const query = {uid: id};
+            const result = await usersCollection.findOne(query);
+            const user = [result];
+            res.send(user);
         });
 
         app.get('/jwt', async (req, res) => {
