@@ -36,6 +36,7 @@ async function run() {
     try {
         const bikesCategory = client.db('bike-parlour').collection('categories');
         const bikesCollection = client.db('bike-parlour').collection('bikes');
+        const selectedBikes = client.db('bike-parlour').collection('selectedProduct');
         const usersCollection = client.db('bike-parlour').collection('users');
 
         app.get('/categories', async (req, res) => {
@@ -57,6 +58,18 @@ async function run() {
             res.send(result);
         });
 
+        app.post('/selected', async (req, res) => {
+            const bike = req.body;
+            const result = await selectedBikes.insertOne(bike);
+            res.send(result);
+        });
+
+        app.get('/selected', async (req, res) => {
+            const query = {};
+            const result = await selectedBikes.find(query).toArray();
+            res.send(result);
+        });
+
         app.post('/bikes', async (req, res) => {
             const bike = req.body;
             const result = await bikesCollection.insertOne(bike);
@@ -71,7 +84,7 @@ async function run() {
 
         app.get('/user', async (req, res) => {
             const id = req.query.uid;
-            const query = {uid: id};
+            const query = { uid: id };
             const result = await usersCollection.findOne(query);
             const user = [result];
             res.send(user);
