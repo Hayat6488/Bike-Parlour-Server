@@ -70,6 +70,13 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/myproducts', async (req, res) => {
+            const uid = req.params.uid;
+            const query = {uid: uid};
+            const result = await bikesCollection.find(query).toArray();
+            res.send(result);
+        });
+
         app.post('/bikes', async (req, res) => {
             const bike = req.body;
             const result = await bikesCollection.insertOne(bike);
