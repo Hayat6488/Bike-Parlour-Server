@@ -45,6 +45,14 @@ async function run() {
             res.send(categories);
         });
 
+        app.get('/advertised', async (req, res) => {
+            const query = {advertise: true};
+            const categories = await bikesCollection.find(query).toArray();
+            res.send(categories);
+        });
+
+        
+
         app.get('/categories/:name', async (req, res) => {
             const name = req.params.name;
             const query = { category: name };
