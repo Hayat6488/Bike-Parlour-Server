@@ -5,6 +5,7 @@ const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.STRIPE_SEC)
 
 app.use(cors());
 app.use(express.json());
@@ -46,12 +47,10 @@ async function run() {
         });
 
         app.get('/advertised', async (req, res) => {
-            const query = {advertise: true};
+            const query = { advertise: true };
             const categories = await bikesCollection.find(query).toArray();
             res.send(categories);
         });
-
-        
 
         app.get('/categories/:name', async (req, res) => {
             const name = req.params.name;
@@ -72,16 +71,55 @@ async function run() {
             res.send(result);
         });
 
+        app.post('/create-payment-intent', async (req, res) => {
+            const booking = req.body;
+            const price = booking.price;
+            const amount = price;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount: amount,
+                "payment_method_types": [
+                    "card"
+                ]
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        });
+
         app.get('/myorders/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {uid: id};
+            const query = { uid: id };
             const result = await selectedBikes.find(query).toArray();
+            res.send(result);
+        });
+
+        app.get('/myorders/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const product = await selectedBikes.findOne(query);
+            const result = [product];
+            res.send(result);
+        });
+
+        app.put('/myorders/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateData = req.body;
+            const updatedData = {
+                $set: {
+                    paid: updateData.paid
+                }
+            }
+            const result = await selectedBikes.updateOne(query, updatedData, options);
             res.send(result);
         });
 
         app.get('/myproducts', async (req, res) => {
             const uid = req.params.uid;
-            const query = {uid: uid};
+            const query = { uid: uid };
             const result = await bikesCollection.find(query).toArray();
             res.send(result);
         });
@@ -118,17 +156,17 @@ async function run() {
             res.status(403).send({ accessToken: '' })
         });
 
-        app.delete('/myproducts/:id', async(req, res) => {
+        app.delete('/myproducts/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: ObjectId(id)};
+            const query = { _id: ObjectId(id) };
             const result = await bikesCollection.deleteOne(query);
             res.send(result);
         });
 
-        app.put('/myproducts/:id', async(req, res) => {
+        app.put('/myproducts/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id: ObjectId(id)};
-            const options = {upsert: true};
+            const query = { _id: ObjectId(id) };
+            const options = { upsert: true };
             const updateData = req.body;
             const updatedData = {
                 $set: {
