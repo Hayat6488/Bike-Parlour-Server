@@ -39,6 +39,7 @@ async function run() {
         const bikesCollection = client.db('bike-parlour').collection('bikes');
         const selectedBikes = client.db('bike-parlour').collection('selectedProduct');
         const usersCollection = client.db('bike-parlour').collection('users');
+        const paymentCollection = client.db('bike-parlour').collection('payments');
 
         app.get('/categories', async (req, res) => {
             const query = {};
@@ -117,6 +118,21 @@ async function run() {
             res.send(result);
         });
 
+        app.put('/myproducts/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateData = req.body;
+            const updatedData = {
+                $set: {
+                    sold: updateData.paid,
+                    advertise: updateData.advertise
+                }
+            }
+            const result = await bikesCollection.updateOne(query, updatedData, options);
+            res.send(result);
+        });
+
         app.get('/myproducts', async (req, res) => {
             const uid = req.params.uid;
             const query = { uid: uid };
@@ -127,6 +143,12 @@ async function run() {
         app.post('/bikes', async (req, res) => {
             const bike = req.body;
             const result = await bikesCollection.insertOne(bike);
+            res.send(result);
+        });
+
+        app.post('/payments', async (req, res) => {
+            const bike = req.body;
+            const result = await paymentCollection.insertOne(bike);
             res.send(result);
         });
 
