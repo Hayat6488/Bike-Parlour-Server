@@ -58,14 +58,15 @@ async function run() {
             res.send(result);
         });
 
-        app.post('/selected', async (req, res) => {
+        app.post('/myorders', async (req, res) => {
             const bike = req.body;
             const result = await selectedBikes.insertOne(bike);
             res.send(result);
         });
 
-        app.get('/selected', async (req, res) => {
-            const query = {};
+        app.get('/myorders/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = {uid: id};
             const result = await selectedBikes.find(query).toArray();
             res.send(result);
         });
