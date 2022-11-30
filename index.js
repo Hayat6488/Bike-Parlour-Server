@@ -109,6 +109,27 @@ async function run() {
             res.status(403).send({ accessToken: '' })
         });
 
+        app.delete('/myproducts/:id', async(req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id)};
+            const result = await bikesCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.put('/myproducts/:id', async(req, res) => {
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const options = {upsert: true};
+            const updateData = req.body;
+            const updatedData = {
+                $set: {
+                    advertise: updateData.advertise
+                }
+            }
+            const result = await bikesCollection.updateOne(query, updatedData, options);
+            res.send(result);
+        });
+
         app.get('/jwts', async (req, res) => {
             const uid = req.query.uid;
             const query = { uid: uid };
