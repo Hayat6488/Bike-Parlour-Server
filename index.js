@@ -104,14 +104,6 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/products/reported', async (req, res) => {
-            const report = true;
-            const query = { report: report};
-            const product = await bikesCollection.findOne(query);
-            const result = [product];
-            res.send(result);
-        });
-
         app.put('/myorders/products/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
@@ -192,6 +184,7 @@ async function run() {
         app.get('/users/buyer', async (req, res) => {
             const buyer = 'Buyer';
             const query = { role: buyer };
+            console.log(usersCollection);
             const result = await usersCollection.find(query).toArray();
             const user = [result];
             res.send(user);
@@ -203,6 +196,13 @@ async function run() {
             const result = await usersCollection.find(query).toArray();
             const user = [result];
             res.send(user);
+        });
+
+        app.get('/products/reported', async (req, res) => {
+            const report = true;
+            const query = { report: report };
+            const products = await bikesCollection.find(query).toArray();
+            res.send(products);
         });
 
         app.get('/jwt', async (req, res) => {
