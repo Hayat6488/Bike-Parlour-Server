@@ -104,6 +104,14 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/products/reported', async (req, res) => {
+            const report = true;
+            const query = { report: report};
+            const product = await bikesCollection.findOne(query);
+            const result = [product];
+            res.send(result);
+        });
+
         app.put('/myorders/products/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
@@ -117,6 +125,21 @@ async function run() {
             const result = await selectedBikes.updateOne(query, updatedData, options);
             res.send(result);
         });
+
+        app.put('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateData = req.body;
+            const updatedData = {
+                $set: {
+                    report: updateData.report
+                }
+            }
+            const result = await bikesCollection.updateOne(query, updatedData, options);
+            res.send(result);
+        });
+        
 
         app.put('/myproducts/:id', async (req, res) => {
             const id = req.params.id;
@@ -166,6 +189,22 @@ async function run() {
             res.send(user);
         });
 
+        app.get('/users/buyer', async (req, res) => {
+            const buyer = 'Buyer';
+            const query = { role: buyer };
+            const result = await usersCollection.find(query).toArray();
+            const user = [result];
+            res.send(user);
+        });
+
+        app.get('/users/seller', async (req, res) => {
+            const seller = 'Seller';
+            const query = { role: seller };
+            const result = await usersCollection.find(query).toArray();
+            const user = [result];
+            res.send(user);
+        });
+
         app.get('/jwt', async (req, res) => {
             const uid = req.query.uid;
             const query = { uid: uid };
@@ -182,6 +221,13 @@ async function run() {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await bikesCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.delete('/users/buyer/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(query);
             res.send(result);
         });
 
