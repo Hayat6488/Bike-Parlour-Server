@@ -23,7 +23,7 @@ function verifyJWT(req, res, next) {
 
     const token = authHeader.split(' ')[1];
 
-    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
         if (err) {
             return res.status(403).send({ message: 'forbidden access' })
         }
@@ -40,6 +40,39 @@ async function run() {
         const selectedBikes = client.db('bike-parlour').collection('selectedProduct');
         const usersCollection = client.db('bike-parlour').collection('users');
         const paymentCollection = client.db('bike-parlour').collection('payments');
+
+        const verifyAdmin = async (req, res, next) => {
+            const decodedUid = req.decoded.uid;
+            const query = { uid: decodedUid };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'Admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+        const verifyBuyer = async (req, res, next) => {
+            const decodedUid = req.decoded.uid;
+            const query = { uid: decodedUid };
+
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'Buyer') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+        const verifySeller = async (req, res, next) => {
+            const decodedUid = req.decoded.uid;
+            const query = { uid: decodedUid };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'Seller') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
 
         app.get('/categories', async (req, res) => {
             const query = {};
@@ -89,7 +122,7 @@ async function run() {
             });
         });
 
-        app.get('/myorders/:id', async (req, res) => {
+        app.get('/myorders/:id', verifyJWT, verifyBuyer, async (req, res) => {
             const id = req.params.id;
             const query = { uid: id };
             const result = await selectedBikes.find(query).toArray();
@@ -104,7 +137,7 @@ async function run() {
             res.send(result);
         });
 
-        app.put('/myorders/products/:id', async (req, res) => {
+        app.put('/myorders/products/:id', verifyJWT, verifyBuyer, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const options = { upsert: true };
@@ -133,14 +166,14 @@ async function run() {
         });
         
 
-        app.put('/myproducts/:id', async (req, res) => {
+        app.put('/myproducts/:id', verifyJWT, verifyBuyer, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateData = req.body;
             const updatedData = {
                 $set: {
-                    sold: updateData.paid,
+                    sold: updateData.sold,
                     advertise: updateData.advertise
                 }
             }
@@ -148,20 +181,20 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/myproducts', async (req, res) => {
+        app.get('/myproducts', verifyJWT, verifySeller, async (req, res) => {
             const uid = req.params.uid;
             const query = { uid: uid };
             const result = await bikesCollection.find(query).toArray();
             res.send(result);
         });
 
-        app.post('/bikes', async (req, res) => {
+        app.post('/bikes',verifyJWT, verifySeller, async (req, res) => {
             const bike = req.body;
             const result = await bikesCollection.insertOne(bike);
             res.send(result);
         });
 
-        app.post('/payments', async (req, res) => {
+        app.post('/payments', verifyJWT, verifyBuyer, async (req, res) => {
             const bike = req.body;
             const result = await paymentCollection.insertOne(bike);
             res.send(result);
@@ -181,16 +214,15 @@ async function run() {
             res.send(user);
         });
 
-        app.get('/users/buyer', async (req, res) => {
+        app.get('/users/buyer', verifyJWT, verifyAdmin, async (req, res) => {
             const buyer = 'Buyer';
             const query = { role: buyer };
-            console.log(usersCollection);
             const result = await usersCollection.find(query).toArray();
             const user = [result];
             res.send(user);
         });
 
-        app.get('/users/seller', async (req, res) => {
+        app.get('/users/seller', verifyJWT, verifyAdmin, async (req, res) => {
             const seller = 'Seller';
             const query = { role: seller };
             const result = await usersCollection.find(query).toArray();
@@ -198,47 +230,63 @@ async function run() {
             res.send(user);
         });
 
-        app.get('/products/reported', async (req, res) => {
+        app.get('/products/reported', verifyJWT, verifyAdmin, async (req, res) => {
             const report = true;
             const query = { report: report };
             const products = await bikesCollection.find(query).toArray();
             res.send(products);
         });
 
-        app.get('/jwt', async (req, res) => {
-            const uid = req.query.uid;
-            const query = { uid: uid };
+        app.get('/users/admin/:uid', async (req, res) => {
+            const uid = req.params.uid;
+            const query = { uid: uid }
             const user = await usersCollection.findOne(query);
-            if (user) {
-                const token = jwt.sign({ uid }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });
-                return res.send({ accessToken: token })
-            }
-            console.log(user);
-            res.status(403).send({ accessToken: '' })
-        });
+            res.send({ isAdmin: user?.role === 'Admin' });
+        })
 
-        app.delete('/myproducts/:id', async (req, res) => {
+        app.get('/users/buyer/:uid', async (req, res) => {
+            const uid = req.params.uid;
+            const query = { uid: uid }
+            const user = await usersCollection.findOne(query);
+            res.send({ isBuyer: user?.role === 'Buyer' });
+        })
+        
+        app.get('/users/seller/:uid', async (req, res) => {
+            const uid = req.params.uid;
+            const query = { uid: uid }
+            const user = await usersCollection.findOne(query);
+            res.send({ isSeller: user?.role === 'Seller' });
+        })
+
+        app.delete('/myproducts/:id', verifyJWT, verifySeller, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await bikesCollection.deleteOne(query);
             res.send(result);
         });
 
-        app.delete('/users/buyer/:id', async (req, res) => {
+        app.delete('/reported/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await bikesCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.delete('/users/buyer/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         });
 
-        app.delete('/users/seller/:id', async (req, res) => {
+        app.delete('/users/seller/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         });
 
-        app.put('/users/seller/:id', async (req, res) => {
+        app.put('/users/seller/:id', verifyJWT,  verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const options = { upsert: true };
@@ -252,7 +300,7 @@ async function run() {
             res.send(result);
         });
 
-        app.put('/myproducts/:id', async (req, res) => {
+        app.put('/myproducts/advert/:id', verifyJWT, verifySeller, async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const options = { upsert: true };
@@ -266,15 +314,26 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/jwts', async (req, res) => {
+        // app.get('/jwts', async (req, res) => {
+        //     const uid = req.query.uid;
+        //     const query = { uid: uid };
+        //     const user = await usersCollection.findOne(query);
+        //     if (!user) {
+        //         const token = jwt.sign({ uid }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });
+        //         return res.send({ accessToken: token })
+        //     }
+        //     console.log(user);
+        //     res.status(403).send({ accessToken: '' })
+        // });
+
+        app.get('/jwt', async (req, res) => {
             const uid = req.query.uid;
             const query = { uid: uid };
             const user = await usersCollection.findOne(query);
-            if (!user) {
+            if (user) {
                 const token = jwt.sign({ uid }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });
                 return res.send({ accessToken: token })
             }
-            console.log(user);
             res.status(403).send({ accessToken: '' })
         });
 
