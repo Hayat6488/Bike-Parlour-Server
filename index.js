@@ -231,6 +231,20 @@ async function run() {
             res.send(result);
         });
 
+        app.put('/users/buyer/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateData = req.body;
+            const updatedData = {
+                $set: {
+                    verified: updateData.verified
+                }
+            }
+            const result = await usersCollection.updateOne(query, updatedData, options);
+            res.send(result);
+        });
+
         app.put('/myproducts/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
